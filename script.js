@@ -170,5 +170,7 @@ function shareRefLink() {
   tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
 }
 
-// Запуск авторизации
-authUser();
+// Запускаем авторизацию, а затем включаем синхронизацию
+authUser().then(() => {
+  setInterval(syncProgress, 3000);
+});
