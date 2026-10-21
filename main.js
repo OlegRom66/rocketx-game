@@ -15,7 +15,6 @@ let cooldownTimer = 0;
 let engineCost = 100;
 let cooldownCost = 250;
 
-let distanceBuffer = 0;
 let isLoaded = false;
 let isSyncing = false;
 
@@ -79,7 +78,6 @@ function animateWarp() {
     ctx.strokeStyle = `rgba(100, 225, 255, ${s.opacity * 0.8})`;
 
     if (isBoostActive) {
-      // При форсаже точки вытягиваются в неоновые световые линии
       const tailLength = Math.min(60, currentStarSpeed * 5);
       ctx.lineWidth = s.size * 1.2;
       ctx.beginPath();
@@ -87,7 +85,6 @@ function animateWarp() {
       ctx.lineTo(s.x, s.y - tailLength);
       ctx.stroke();
     } else {
-      // В обычном режиме - круглые аккуратные звезды
       ctx.beginPath();
       ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
       ctx.fill();
@@ -99,7 +96,7 @@ function animateWarp() {
 requestAnimationFrame(animateWarp);
 
 // ==========================================
-// ИГРОВАЯ ЭКОНОМИКА И ИНТЕРФЕЙС
+// ЭКОНОМИКА И ИНТЕРФЕЙС
 // ==========================================
 function recalculateCosts() {
   const engineLevels = Math.max(0, Math.round((baseSpeed - 10) / 10));
@@ -125,19 +122,16 @@ function updateButtons() {
 // ==========================================
 async function authUser() {
   if (!tg?.initData) {
-    console.log("Запуск вне Telegram или отсутствует initData");
+    console.log("Запуск вне Telegram");
+    isLoaded = true;
     return;
   }
 
   try {
     const res = await fetch(`${API_URL}?action=auth`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        initData: tg.initData
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ initData: tg.initData })
     });
 
     if (res.ok) {
@@ -152,74 +146,62 @@ async function authUser() {
 
       recalculateCosts();
       updateButtons();
-      console.log("Прогресс успешно синхронизирован с БД:", data);
-    } else {
-      const errText = await res.text();
-      console.error("Ошибка авторизации:", res.status, errText);
+      console.log("Данные загружены из БД:", data);
     }
   } catch (err) {
-    console.error("Сетевая ошибка при авторизации:", err);
+    console.error("Ошибка при авторизации:", err);
   } finally {
     isLoaded = true;
   }
 }
 
 async function syncProgress() {
-  if (!tg?.initData || distanceBuffer <= 0 || isSyncing) return;
+  if (!tg?.initData || !isLoaded || isSyncing) return;
 
   isSyncing = true;
-  const toSend = distanceBuffer;
-  distanceBuffer = 0;
-
   try {
-    const res = await fetch(`${API_URL}?action=sync`, {
+    await fetch(`${API_URL}?action=sync`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         initData: tg.initData,
-        added_distance: toSend,
+        distance: score,
         speed: baseSpeed,
         cooldown_reduction: 5 - cooldownDuration
       })
     });
-
-    if (!res.ok) {
-      distanceBuffer += toSend;
-    }
   } catch (err) {
-    distanceBuffer += toSend;
+    console.error("Ошибка синхронизации:", err);
   } finally {
     isSyncing = false;
   }
 }
 
-// Игровой цикл начисления километров (каждые 100мс)
+// Начисление дистанции
 setInterval(() => {
+  if (!isLoaded) return;
   const step = Math.round(currentSpeed / 10);
   score += step;
-  distanceBuffer += step;
   if (scoreEl) scoreEl.innerText = score.toLocaleString() + ' км';
   updateButtons();
 }, 100);
 
 // ==========================================
-// УПРАВЛЕНИЕ И УЛУЧШЕНИЯ
+// ДЕЙСТВИЯ
 // ==========================================
 function activateBoost() {
   if (cooldownTimer > 0) return;
   tg?.HapticFeedback?.impactOccurred('heavy');
 
   currentSpeed = baseSpeed * 3;
-  warpMultiplier = 6; // Включаем вытягивание звёзд в лучи
+  warpMultiplier = 6;
   if (speedEl) speedEl.innerText = currentSpeed;
   if (rocket) rocket.classList.add('boosting');
   if (rocketAura) rocketAura.classList.add('boosting');
 
   setTimeout(() => {
     currentSpeed = baseSpeed;
-    warpMultiplier = 1; // Возвращаем обычную скорость звезд
+    warpMultiplier = 1;
     if (speedEl) speedEl.innerText = currentSpeed;
     if (rocket) rocket.classList.remove('boosting');
     if (rocketAura) rocketAura.classList.remove('boosting');
@@ -249,11 +231,10 @@ function buyEngine() {
     baseSpeed += 10;
     currentSpeed = baseSpeed;
     if (speedEl) speedEl.innerText = currentSpeed;
-    engineCost = Math.round(engineCost * 1.5);
-    const btnEngine = document.getElementById('btn-engine');
-    if (btnEngine) btnEngine.innerText = engineCost + ' км';
-    distanceBuffer -= engineCost;
-    syncProgress();
+    if (scoreEl) scoreEl.innerText = score.toLocaleString() + ' км';
+    recalculateCosts();
+    updateButtons();
+    syncProgress(); // Сразу отправляем новую скорость в базу
   }
 }
 
@@ -261,11 +242,10 @@ function buyCooldown() {
   if (score >= cooldownCost && cooldownDuration > 2) {
     score -= cooldownCost;
     cooldownDuration -= 0.5;
-    cooldownCost = Math.round(cooldownCost * 1.8);
-    const btnCooldown = document.getElementById('btn-cooldown');
-    if (btnCooldown) btnCooldown.innerText = cooldownCost + ' км';
-    distanceBuffer -= cooldownCost;
-    syncProgress();
+    if (scoreEl) scoreEl.innerText = score.toLocaleString() + ' км';
+    recalculateCosts();
+    updateButtons();
+    syncProgress(); // Сразу отправляем новый откат в базу
   }
 }
 
@@ -285,7 +265,11 @@ function shareRefLink() {
   tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
 }
 
-// Запуск: игра стартует сразу, авторизация идет параллельно,
-// а синхронизация пакетов в БД отправляется каждую 1 секунду.
+// Запуск игры и регулярная синхронизация каждые 1.5 секунды
 authUser();
-setInterval(syncProgress, 1000);
+setInterval(syncProgress, 1500);
+
+// Дополнительная синхронизация при сворачивании игры
+window.addEventListener('visibilitychange', () => {
+  if (document.hidden) syncProgress();
+});
