@@ -2,63 +2,79 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <title>RocketX</title>
-  <link rel="stylesheet" href="style.css?v=1.1">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-
-  <div class="hud">
-    <div class="score-title">Пройденная дистанция</div>
-    <div class="score-value" id="score">0 км</div>
-    <div class="speed-badge">Скорость: <span id="speed">10</span> км/с</div>
-  </div>
-
-  <!-- Экран 1: Полет -->
-  <div class="screen active" id="screen-game">
-    <div class="rocket" id="rocket"><div class="flame"></div></div>
-    <button class="boost-btn" id="boostBtn" onclick="activateBoost()">ФОРСАЖ (x3)</button>
-  </div>
-
-  <!-- Экран 2: Улучшения -->
-  <div class="screen" id="screen-upgrades">
-    <div class="upgrade-list">
-      <div class="upgrade-card">
-        <div class="upgrade-info">
-          <h4>Ионный двигатель</h4>
-          <p>+10 км/с к базовой скорости</p>
-        </div>
-        <button class="buy-btn" id="btn-engine" onclick="buyEngine()">100 км</button>
+  <div id="game-container">
+    
+    <!-- Экран 1: Полет -->
+    <div id="screen-flight" class="screen active">
+      <div class="stats-card">
+        <p class="stats-label">ПРОЙДЕННАЯ ДИСТАНЦИЯ</p>
+        <h1 id="score">0 км</h1>
+        <div class="speed-badge">Скорость: <span id="speed">10</span> км/с</div>
       </div>
-      <div class="upgrade-card">
-        <div class="upgrade-info">
-          <h4>Охлаждение закиси</h4>
-          <p>-0.5 сек к кулдауну форсажа</p>
+
+      <div class="space-view">
+        <div class="rocket" id="rocket">
+          <div class="rocket-body"></div>
+          <div class="rocket-flame"></div>
         </div>
-        <button class="buy-btn" id="btn-cooldown" onclick="buyCooldown()">250 км</button>
+      </div>
+
+      <div class="controls">
+        <button id="boostBtn" class="action-btn boost" onclick="activateBoost()">ФОРСАЖ (x3)</button>
       </div>
     </div>
+
+    <!-- Экран 2: Прокачка -->
+    <div id="screen-upgrade" class="screen">
+      <div class="screen-title">АНГАР МОДЕРНИЗАЦИИ</div>
+      
+      <div class="upgrade-card">
+        <div class="upgrade-info">
+          <h3>Двигатель "Вулкан"</h3>
+          <p>+10 км/с к базовой скорости</p>
+        </div>
+        <button id="btn-engine" class="upgrade-btn" onclick="buyEngine()">100 км</button>
+      </div>
+
+      <div class="upgrade-card">
+        <div class="upgrade-info">
+          <h3>Охлаждение форсажа</h3>
+          <p>-0.5с к откату ускорения</p>
+        </div>
+        <button id="btn-cooldown" class="upgrade-btn" onclick="buyCooldown()">250 км</button>
+      </div>
+    </div>
+
+    <!-- Экран 3: Друзья -->
+    <div id="screen-friends" class="screen">
+      <div class="screen-title">ЭКИПАЖ</div>
+      <p class="friends-desc">Приглашай друзей и получай 10% от всей дистанции, которую они пролетят!</p>
+      
+      <button class="action-btn share-btn" onclick="shareRefLink()">ПРИГЛАСИТЬ ДРУГА</button>
+    </div>
+
+    <!-- Нижнее меню переключения -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" onclick="switchTab('screen-flight', this)">
+        <span>🚀</span> Полет
+      </button>
+      <button class="nav-btn" onclick="switchTab('screen-upgrade', this)">
+        <span>⚙️</span> Прокачка
+      </button>
+      <button class="nav-btn" onclick="switchTab('screen-friends', this)">
+        <span>👥</span> Друзья
+      </button>
+    </nav>
   </div>
 
-  <!-- Экран 3: Рефералы -->
-  <div class="screen" id="screen-friends">
-    <h3 style="margin-bottom: 10px;">Приглашай пилотов</h3>
-    <p style="font-size: 13px; color: #7f8b9e; text-align: center; margin-bottom: 20px;">
-      Получай +10 000 км за каждого друга и 10% от всей его дистанции!
-    </p>
-    <button class="boost-btn" style="margin: 0; background: #0088cc;" onclick="shareRefLink()">Пригласить друга</button>
-  </div>
-
-  <!-- Таб-бар -->
-  <div class="bottom-nav">
-    <button class="nav-btn active" onclick="switchTab('screen-game', this)">🚀 Полет</button>
-    <button class="nav-btn" onclick="switchTab('screen-upgrades', this)">⚙️ Прокачка</button>
-    <button class="nav-btn" onclick="switchTab('screen-friends', this)">👥 Друзья</button>
-  </div>
-
-  <script src="main.js"></script>
+  <script src="main.js?v=final_1"></script>
 </body>
 </html>
