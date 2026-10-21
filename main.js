@@ -87,10 +87,10 @@ async function syncProgress() {
     const res = await fetch(`${API_URL}?action=sync`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": tg.initData
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
+        initData: tg.initData,
         added_distance: toSend,
         speed: baseSpeed,
         cooldown_reduction: 5 - cooldownDuration
