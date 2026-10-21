@@ -1,4 +1,4 @@
-const API_URL = "https://holders-second-robertson-lunch.trycloudflare.com";
+const API_URL = "http://legacybjj.ru/api.php";
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
