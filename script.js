@@ -95,9 +95,6 @@ setInterval(() => {
   updateButtons();
 }, 100);
 
-// Синхронизация с сервером каждые 3 секунды
-setInterval(syncProgress, 3000);
-
 function activateBoost() {
   if (cooldownTimer > 0) return;
   tg?.HapticFeedback?.impactOccurred('heavy');
