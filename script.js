@@ -1,5 +1,5 @@
 // Адрес твоего PHP бэкенда на хостинге
-const API_URL = "http://legacybjj.ru/api.php";
+const API_URL = "https://legacybjj.ru/api.php";
 
 const tg = window.Telegram?.WebApp;
 if (tg) {
