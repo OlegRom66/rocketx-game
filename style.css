@@ -19,9 +19,19 @@ body {
   height: 100vh;
   width: 100vw;
   position: relative;
-  /* Устанавливаем твой фон на всю игру */
   background: #0b0e14 url('bg.jpg') no-repeat center center;
   background-size: cover;
+}
+
+/* Холст для процедурного варп-эффекта */
+#warpCanvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
 }
 
 /* Экраны */
@@ -42,7 +52,7 @@ body {
 /* Статистика дистанции */
 .stats-card {
   text-align: center;
-  margin-top: 20px;
+  margin-top: 15px;
   z-index: 5;
 }
 
@@ -72,7 +82,7 @@ body {
   backdrop-filter: blur(5px);
 }
 
-/* Игровая зона с ракетой */
+/* Игровая зона */
 .space-view {
   flex: 1;
   display: flex;
@@ -82,23 +92,37 @@ body {
   z-index: 3;
 }
 
-/* Ракета на базе картинок */
+/* Аура скорости и обводка */
+.rocket-aura {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease-out;
+}
+
+.rocket-aura.boosting {
+  filter: drop-shadow(0 0 25px #00f2fe) drop-shadow(0 0 45px rgba(0, 242, 254, 0.6));
+}
+
+/* Корпус ракеты */
 .rocket {
   width: 140px;
-  height: 180px;
+  height: 190px;
   background-image: url('rocket.png');
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: contain;
-  transition: transform 0.25s ease-out;
+  transition: transform 0.2s ease-out;
   animation: floating 3s ease-in-out infinite;
 }
 
-/* Режим Форсажа: подмена на ракету с огнем и лёгкая вибрация */
+/* Форсаж: подмена на ракету с огнем и дрожание */
 .rocket.boosting {
   background-image: url('rocket-boost.png') !important;
-  transform: scale(1.15) translateY(-15px);
-  animation: boostShake 0.1s infinite alternate;
+  transform: scale(1.1) translateY(-10px);
+  animation: boostShake 0.08s infinite alternate;
 }
 
 @keyframes floating {
@@ -107,39 +131,8 @@ body {
 }
 
 @keyframes boostShake {
-  0% { transform: scale(1.15) translateY(-15px) translateX(-1px); }
-  100% { transform: scale(1.15) translateY(-15px) translateX(1px); }
-}
-
-/* Эффект скорости (полосы/варп-линии) */
-.speed-lines {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-  z-index: 1;
-  background: repeating-linear-gradient(
-    90deg,
-    transparent 0px,
-    transparent 40px,
-    rgba(255, 255, 255, 0.35) 41px,
-    transparent 42px
-  );
-  background-size: 100% 200%;
-}
-
-.speed-lines.active {
-  opacity: 1;
-  animation: warpSpeed 0.2s linear infinite;
-}
-
-@keyframes warpSpeed {
-  0% { background-position: 0 0; }
-  100% { background-position: 0 100%; }
+  0% { transform: scale(1.1) translateY(-10px) translateX(-1px); }
+  100% { transform: scale(1.1) translateY(-10px) translateX(1px); }
 }
 
 /* Кнопка Форсажа */
@@ -176,7 +169,7 @@ body {
   cursor: not-allowed;
 }
 
-/* Экраны Улучшений и Друзей */
+/* Экраны Прокачки и Экипажа */
 .screen-title {
   font-size: 20px;
   font-weight: 800;
@@ -237,7 +230,7 @@ body {
   box-shadow: 0 6px 20px rgba(47, 128, 237, 0.4);
 }
 
-/* Нижняя навигация */
+/* Нижнее меню */
 .bottom-nav {
   position: absolute;
   bottom: 0;
