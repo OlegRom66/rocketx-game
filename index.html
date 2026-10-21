@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
   <title>RocketX</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style.css?v=visual_2">
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
-  <script>eruda.init();</script>
 </head>
 <body>
   <div id="game-container">
-    
+    <!-- Полосы гиперскорости -->
+    <div id="speedLines" class="speed-lines"></div>
+
     <!-- Экран 1: Полет -->
     <div id="screen-flight" class="screen active">
       <div class="stats-card">
@@ -21,14 +21,11 @@
       </div>
 
       <div class="space-view">
-        <div class="rocket" id="rocket">
-          <div class="rocket-body"></div>
-          <div class="rocket-flame"></div>
-        </div>
+        <div class="rocket" id="rocket"></div>
       </div>
 
       <div class="controls">
-        <button id="boostBtn" class="action-btn boost" onclick="activateBoost()">ФОРСАЖ (x3)</button>
+        <button id="boostBtn" class="boost-btn" onclick="activateBoost()">ФОРСАЖ (x3)</button>
       </div>
     </div>
 
@@ -58,7 +55,7 @@
       <div class="screen-title">ЭКИПАЖ</div>
       <p class="friends-desc">Приглашай друзей и получай 10% от всей дистанции, которую они пролетят!</p>
       
-      <button class="action-btn share-btn" onclick="shareRefLink()">ПРИГЛАСИТЬ ДРУГА</button>
+      <button class="boost-btn share-btn" onclick="shareRefLink()">ПРИГЛАСИТЬ ДРУГА</button>
     </div>
 
     <!-- Нижнее меню переключения -->
@@ -75,6 +72,6 @@
     </nav>
   </div>
 
-  <script src="main.js?v=final_1"></script>
+  <script src="main.js?v=visual_2"></script>
 </body>
 </html>
