@@ -1,3 +1,4 @@
+// Адрес твоего PHP бэкенда на хостинге
 const API_URL = "http://legacybjj.ru/api.php";
 
 const tg = window.Telegram?.WebApp;
@@ -16,29 +17,27 @@ let engineCost = 100;
 let cooldownCost = 250;
 
 let distanceBuffer = 0;
-let isLoaded = false; // Флаг: начислять очки только после загрузки данных
+let isLoaded = false; // Блокировка начисления до завершения авторизации
 
 const scoreEl = document.getElementById('score');
 const speedEl = document.getElementById('speed');
 const boostBtn = document.getElementById('boostBtn');
 const rocket = document.getElementById('rocket');
 
-// Пересчет цен магазинов под текущий уровень
+// Пересчет цен магазинов под текущий уровень игрока
 function recalculateCosts() {
-  // Базовая скорость 10, каждый апгрейд давал +10
   const engineLevels = Math.max(0, Math.round((baseSpeed - 10) / 10));
   engineCost = Math.round(100 * Math.pow(1.5, engineLevels));
   const btnEngine = document.getElementById('btn-engine');
   if (btnEngine) btnEngine.innerText = engineCost + ' км';
 
-  // Базовый кулдаун 5.0, каждый апгрейд уменьшал на 0.5
   const cooldownLevels = Math.max(0, Math.round((5 - cooldownDuration) / 0.5));
   cooldownCost = Math.round(250 * Math.pow(1.8, cooldownLevels));
   const btnCooldown = document.getElementById('btn-cooldown');
   if (btnCooldown) btnCooldown.innerText = cooldownCost + ' км';
 }
 
-// Авторизация и загрузка прогресса из БД
+// Авторизация и загрузка прогресса из базы данных
 async function authUser() {
   if (!tg?.initData) {
     console.log("Запуск вне Telegram, локальный режим.");
@@ -47,7 +46,7 @@ async function authUser() {
   }
 
   try {
-    const res = await fetch(`${API_URL}/api/auth`, {
+    const res = await fetch(`${API_URL}?action=auth`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -68,15 +67,17 @@ async function authUser() {
       recalculateCosts();
       updateButtons();
       console.log("Прогресс успешно загружен с сервера:", data);
+    } else {
+      console.error("Ошибка авторизации на сервере:", res.status);
     }
   } catch (err) {
-    console.error("Ошибка при авторизации:", err);
+    console.error("Сетевая ошибка при авторизации:", err);
   } finally {
     isLoaded = true;
   }
 }
 
-// Фоновая отправка набранной дистанции
+// Фоновая отправка набранной дистанции в базу данных
 async function syncProgress() {
   if (!tg?.initData || !isLoaded || distanceBuffer <= 0) return;
 
@@ -84,7 +85,7 @@ async function syncProgress() {
   distanceBuffer = 0;
 
   try {
-    const res = await fetch(`${API_URL}/api/sync`, {
+    const res = await fetch(`${API_URL}?action=sync`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +106,7 @@ async function syncProgress() {
   }
 }
 
-// Игровой цикл начисления дистанции (работает ТОЛЬКО когда isLoaded == true)
+// Игровой цикл начисления дистанции (работает только после загрузки данных)
 setInterval(() => {
   if (!isLoaded) return;
 
@@ -118,79 +119,3 @@ setInterval(() => {
 
 function activateBoost() {
   if (cooldownTimer > 0) return;
-  tg?.HapticFeedback?.impactOccurred('heavy');
-
-  currentSpeed = baseSpeed * 3;
-  speedEl.innerText = currentSpeed;
-  rocket.classList.add('boosting');
-
-  setTimeout(() => {
-    currentSpeed = baseSpeed;
-    speedEl.innerText = currentSpeed;
-    rocket.classList.remove('boosting');
-  }, 1500);
-
-  cooldownTimer = cooldownDuration;
-  runCooldown();
-}
-
-function runCooldown() {
-  if (cooldownTimer > 0) {
-    boostBtn.disabled = true;
-    boostBtn.innerText = `ПЕРЕЗАРЯДКА (${cooldownTimer}s)`;
-    cooldownTimer--;
-    setTimeout(runCooldown, 1000);
-  } else {
-    boostBtn.disabled = false;
-    boostBtn.innerText = 'ФОРСАЖ (x3)';
-  }
-}
-
-function buyEngine() {
-  if (score >= engineCost) {
-    score -= engineCost;
-    baseSpeed += 10;
-    currentSpeed = baseSpeed;
-    speedEl.innerText = currentSpeed;
-    engineCost = Math.round(engineCost * 1.5);
-    document.getElementById('btn-engine').innerText = engineCost + ' км';
-    distanceBuffer -= engineCost; // Учитываем трату очков в буфере
-  }
-}
-
-function buyCooldown() {
-  if (score >= cooldownCost && cooldownDuration > 2) {
-    score -= cooldownCost;
-    cooldownDuration -= 0.5;
-    cooldownCost = Math.round(cooldownCost * 1.8);
-    document.getElementById('btn-cooldown').innerText = cooldownCost + ' км';
-    distanceBuffer -= cooldownCost; // Учитываем трату очков в буфере
-  }
-}
-
-function updateButtons() {
-  const btnEngine = document.getElementById('btn-engine');
-  const btnCooldown = document.getElementById('btn-cooldown');
-  if (btnEngine) btnEngine.disabled = score < engineCost;
-  if (btnCooldown) btnCooldown.disabled = score < cooldownCost || cooldownDuration <= 2;
-}
-
-function switchTab(screenId, btn) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById(screenId).classList.add('active');
-  btn.classList.add('active');
-}
-
-function shareRefLink() {
-  const myId = tg?.initDataUnsafe?.user?.id || 'demo';
-  const refUrl = `https://t.me/rocketX_tap_bot/app?startapp=ref_${myId}`;
-  const text = `Полетели на Луну со мной в RocketX! Лови +5,000 км бонуса на старте:`;
-  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refUrl)}&text=${encodeURIComponent(text)}`;
-  tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
-}
-
-// Запуск: сначала авторизуемся и получаем данные из БД, затем запускаем фоновую синхронизацию
-authUser().then(() => {
-  setInterval(syncProgress, 3000);
-});
