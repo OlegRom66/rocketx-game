@@ -12,22 +12,37 @@ let currentSpeed = baseSpeed;
 let cooldownDuration = 5;
 let cooldownTimer = 0;
 
-// Цены улучшений
 let engineCost = 100;
 let cooldownCost = 250;
 
-// Буфер дистанции для отправки на бэкенд
 let distanceBuffer = 0;
+let isLoaded = false; // Флаг: начислять очки только после загрузки данных
 
 const scoreEl = document.getElementById('score');
 const speedEl = document.getElementById('speed');
 const boostBtn = document.getElementById('boostBtn');
 const rocket = document.getElementById('rocket');
 
+// Пересчет цен магазинов под текущий уровень
+function recalculateCosts() {
+  // Базовая скорость 10, каждый апгрейд давал +10
+  const engineLevels = Math.max(0, Math.round((baseSpeed - 10) / 10));
+  engineCost = Math.round(100 * Math.pow(1.5, engineLevels));
+  const btnEngine = document.getElementById('btn-engine');
+  if (btnEngine) btnEngine.innerText = engineCost + ' км';
+
+  // Базовый кулдаун 5.0, каждый апгрейд уменьшал на 0.5
+  const cooldownLevels = Math.max(0, Math.round((5 - cooldownDuration) / 0.5));
+  cooldownCost = Math.round(250 * Math.pow(1.8, cooldownLevels));
+  const btnCooldown = document.getElementById('btn-cooldown');
+  if (btnCooldown) btnCooldown.innerText = cooldownCost + ' км';
+}
+
 // Авторизация и загрузка прогресса из БД
 async function authUser() {
   if (!tg?.initData) {
-    console.log("Запуск вне Telegram, используем локальный режим.");
+    console.log("Запуск вне Telegram, локальный режим.");
+    isLoaded = true;
     return;
   }
 
@@ -42,24 +57,28 @@ async function authUser() {
 
     if (res.ok) {
       const data = await res.json();
-      score = data.distance || 0;
-      baseSpeed = data.speed || 10;
+      score = Number(data.distance) || 0;
+      baseSpeed = Number(data.speed) || 10;
       currentSpeed = baseSpeed;
-      cooldownDuration = 5 - (data.cooldown_reduction || 0);
+      cooldownDuration = 5 - (Number(data.cooldown_reduction) || 0.0);
 
       scoreEl.innerText = score.toLocaleString() + ' км';
       speedEl.innerText = currentSpeed;
+
+      recalculateCosts();
       updateButtons();
       console.log("Прогресс успешно загружен с сервера:", data);
     }
   } catch (err) {
     console.error("Ошибка при авторизации:", err);
+  } finally {
+    isLoaded = true;
   }
 }
 
-// Фоновая синхронизация с сервером
+// Фоновая отправка набранной дистанции
 async function syncProgress() {
-  if (!tg?.initData || distanceBuffer <= 0) return;
+  if (!tg?.initData || !isLoaded || distanceBuffer <= 0) return;
 
   const toSend = distanceBuffer;
   distanceBuffer = 0;
@@ -79,15 +98,17 @@ async function syncProgress() {
     });
 
     if (!res.ok) {
-      distanceBuffer += toSend; // Возвращаем в буфер при ошибке
+      distanceBuffer += toSend;
     }
   } catch (err) {
     distanceBuffer += toSend;
   }
 }
 
-// Игровой цикл начисления дистанции (каждые 100 мс)
+// Игровой цикл начисления дистанции (работает ТОЛЬКО когда isLoaded == true)
 setInterval(() => {
+  if (!isLoaded) return;
+
   const step = Math.round(currentSpeed / 10);
   score += step;
   distanceBuffer += step;
@@ -133,6 +154,7 @@ function buyEngine() {
     speedEl.innerText = currentSpeed;
     engineCost = Math.round(engineCost * 1.5);
     document.getElementById('btn-engine').innerText = engineCost + ' км';
+    distanceBuffer -= engineCost; // Учитываем трату очков в буфере
   }
 }
 
@@ -142,6 +164,7 @@ function buyCooldown() {
     cooldownDuration -= 0.5;
     cooldownCost = Math.round(cooldownCost * 1.8);
     document.getElementById('btn-cooldown').innerText = cooldownCost + ' км';
+    distanceBuffer -= cooldownCost; // Учитываем трату очков в буфере
   }
 }
 
@@ -167,7 +190,7 @@ function shareRefLink() {
   tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
 }
 
-// Запускаем авторизацию, а затем включаем синхронизацию
+// Запуск: сначала авторизуемся и получаем данные из БД, затем запускаем фоновую синхронизацию
 authUser().then(() => {
   setInterval(syncProgress, 3000);
 });
