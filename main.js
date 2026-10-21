@@ -46,9 +46,11 @@ async function authUser() {
     const res = await fetch(`${API_URL}?action=auth`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
-        "Authorization": tg.initData
-      }
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        initData: tg.initData
+      })
     });
 
     if (res.ok) {
@@ -65,7 +67,8 @@ async function authUser() {
       updateButtons();
       console.log("Прогресс успешно загружен:", data);
     } else {
-      console.error("Ошибка авторизации:", res.status);
+      const errText = await res.text();
+      console.error("Ошибка авторизации:", res.status, errText);
     }
   } catch (err) {
     console.error("Сетевая ошибка при авторизации:", err);
