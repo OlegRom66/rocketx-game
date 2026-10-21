@@ -22,6 +22,7 @@ const scoreEl = document.getElementById('score');
 const speedEl = document.getElementById('speed');
 const boostBtn = document.getElementById('boostBtn');
 const rocket = document.getElementById('rocket');
+const speedLines = document.getElementById('speedLines');
 
 function recalculateCosts() {
   const engineLevels = Math.max(0, Math.round((baseSpeed - 10) / 10));
@@ -122,11 +123,13 @@ function activateBoost() {
   currentSpeed = baseSpeed * 3;
   if (speedEl) speedEl.innerText = currentSpeed;
   if (rocket) rocket.classList.add('boosting');
+  if (speedLines) speedLines.classList.add('active');
 
   setTimeout(() => {
     currentSpeed = baseSpeed;
     if (speedEl) speedEl.innerText = currentSpeed;
     if (rocket) rocket.classList.remove('boosting');
+    if (speedLines) speedLines.classList.remove('active');
   }, 1500);
 
   cooldownTimer = cooldownDuration;
