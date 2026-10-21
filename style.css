@@ -20,7 +20,7 @@ body {
   width: 100vw;
   position: relative;
   /* Устанавливаем твой фон на всю игру */
-  background: #0b0e14 url('bg.png') no-repeat center center;
+  background: #0b0e14 url('bg.jpg') no-repeat center center;
   background-size: cover;
 }
 
