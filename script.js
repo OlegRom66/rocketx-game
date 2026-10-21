@@ -1,4 +1,3 @@
-// Адрес твоего PHP бэкенда на хостинге
 const API_URL = "https://genius-line.ru/api.php";
 
 const tg = window.Telegram?.WebApp;
@@ -17,14 +16,13 @@ let engineCost = 100;
 let cooldownCost = 250;
 
 let distanceBuffer = 0;
-let isLoaded = false; // Блокировка начисления до завершения авторизации
+let isLoaded = false;
 
 const scoreEl = document.getElementById('score');
 const speedEl = document.getElementById('speed');
 const boostBtn = document.getElementById('boostBtn');
 const rocket = document.getElementById('rocket');
 
-// Пересчет цен магазинов под текущий уровень игрока
 function recalculateCosts() {
   const engineLevels = Math.max(0, Math.round((baseSpeed - 10) / 10));
   engineCost = Math.round(100 * Math.pow(1.5, engineLevels));
@@ -37,7 +35,6 @@ function recalculateCosts() {
   if (btnCooldown) btnCooldown.innerText = cooldownCost + ' км';
 }
 
-// Авторизация и загрузка прогресса из базы данных
 async function authUser() {
   if (!tg?.initData) {
     console.log("Запуск вне Telegram, локальный режим.");
@@ -61,14 +58,14 @@ async function authUser() {
       currentSpeed = baseSpeed;
       cooldownDuration = 5 - (Number(data.cooldown_reduction) || 0.0);
 
-      scoreEl.innerText = score.toLocaleString() + ' км';
-      speedEl.innerText = currentSpeed;
+      if (scoreEl) scoreEl.innerText = score.toLocaleString() + ' км';
+      if (speedEl) speedEl.innerText = currentSpeed;
 
       recalculateCosts();
       updateButtons();
-      console.log("Прогресс успешно загружен с сервера:", data);
+      console.log("Прогресс успешно загружен:", data);
     } else {
-      console.error("Ошибка авторизации на сервере:", res.status);
+      console.error("Ошибка авторизации:", res.status);
     }
   } catch (err) {
     console.error("Сетевая ошибка при авторизации:", err);
@@ -77,7 +74,6 @@ async function authUser() {
   }
 }
 
-// Фоновая отправка набранной дистанции в базу данных
 async function syncProgress() {
   if (!tg?.initData || !isLoaded || distanceBuffer <= 0) return;
 
@@ -106,16 +102,94 @@ async function syncProgress() {
   }
 }
 
-// Игровой цикл начисления дистанции (работает только после загрузки данных)
 setInterval(() => {
   if (!isLoaded) return;
 
   const step = Math.round(currentSpeed / 10);
   score += step;
   distanceBuffer += step;
-  scoreEl.innerText = score.toLocaleString() + ' км';
+  if (scoreEl) scoreEl.innerText = score.toLocaleString() + ' км';
   updateButtons();
 }, 100);
 
 function activateBoost() {
   if (cooldownTimer > 0) return;
+  tg?.HapticFeedback?.impactOccurred('heavy');
+
+  currentSpeed = baseSpeed * 3;
+  if (speedEl) speedEl.innerText = currentSpeed;
+  if (rocket) rocket.classList.add('boosting');
+
+  setTimeout(() => {
+    currentSpeed = baseSpeed;
+    if (speedEl) speedEl.innerText = currentSpeed;
+    if (rocket) rocket.classList.remove('boosting');
+  }, 1500);
+
+  cooldownTimer = cooldownDuration;
+  runCooldown();
+}
+
+function runCooldown() {
+  if (!boostBtn) return;
+  if (cooldownTimer > 0) {
+    boostBtn.disabled = true;
+    boostBtn.innerText = `ПЕРЕЗАРЯДКА (${cooldownTimer}s)`;
+    cooldownTimer--;
+    setTimeout(runCooldown, 1000);
+  } else {
+    boostBtn.disabled = false;
+    boostBtn.innerText = 'ФОРСАЖ (x3)';
+  }
+}
+
+function buyEngine() {
+  if (score >= engineCost) {
+    score -= engineCost;
+    baseSpeed += 10;
+    currentSpeed = baseSpeed;
+    if (speedEl) speedEl.innerText = currentSpeed;
+    engineCost = Math.round(engineCost * 1.5);
+    const btnEngine = document.getElementById('btn-engine');
+    if (btnEngine) btnEngine.innerText = engineCost + ' км';
+    distanceBuffer -= engineCost;
+  }
+}
+
+function buyCooldown() {
+  if (score >= cooldownCost && cooldownDuration > 2) {
+    score -= cooldownCost;
+    cooldownDuration -= 0.5;
+    cooldownCost = Math.round(cooldownCost * 1.8);
+    const btnCooldown = document.getElementById('btn-cooldown');
+    if (btnCooldown) btnCooldown.innerText = cooldownCost + ' км';
+    distanceBuffer -= cooldownCost;
+  }
+}
+
+function updateButtons() {
+  const btnEngine = document.getElementById('btn-engine');
+  const btnCooldown = document.getElementById('btn-cooldown');
+  if (btnEngine) btnEngine.disabled = score < engineCost;
+  if (btnCooldown) btnCooldown.disabled = score < cooldownCost || cooldownDuration <= 2;
+}
+
+function switchTab(screenId, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  const target = document.getElementById(screenId);
+  if (target) target.classList.add('active');
+  if (btn) btn.classList.add('active');
+}
+
+function shareRefLink() {
+  const myId = tg?.initDataUnsafe?.user?.id || 'demo';
+  const refUrl = `https://t.me/rocketX_tap_bot/app?startapp=ref_${myId}`;
+  const text = `Полетели на Луну со мной в RocketX! Лови +5,000 км бонуса на старте:`;
+  const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refUrl)}&text=${encodeURIComponent(text)}`;
+  tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
+}
+
+authUser().then(() => {
+  setInterval(syncProgress, 3000);
+});
