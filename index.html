@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>RocketX</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    body {
+      background: #0a0d14;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    /* Навигация сверху */
+    .hud { text-align: center; padding-top: 15px; }
+    .score-title { font-size: 12px; color: #7f8b9e; text-transform: uppercase; letter-spacing: 1px; }
+    .score-value { font-size: 34px; font-weight: 800; color: #00f0ff; text-shadow: 0 0 15px rgba(0,240,255,0.4); }
+    .speed-badge { font-size: 13px; background: rgba(255,255,255,0.06); padding: 4px 12px; border-radius: 20px; display: inline-block; margin-top: 4px; }
+
+    /* Экраны */
+    .screen { display: none; height: 60vh; padding: 20px; overflow-y: auto; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+    /* Экран игры */
+    .rocket {
+      width: 65px;
+      height: 110px;
+      background: linear-gradient(180deg, #ffffff 0%, #7d8597 100%);
+      border-radius: 35px 35px 8px 8px;
+      position: relative;
+      box-shadow: 0 0 25px rgba(255,255,255,0.2);
+      transition: transform 0.1s ease;
+    }
+    .rocket.boosting { transform: scale(1.18); box-shadow: 0 0 40px #ff4500; }
+    .flame {
+      position: absolute;
+      bottom: -30px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 22px;
+      height: 35px;
+      background: linear-gradient(180deg, #ffc300 0%, #ff1e00 100%);
+      border-radius: 0 0 12px 12px;
+      animation: flicker 0.1s infinite alternate;
+    }
+    @keyframes flicker {
+      0% { height: 30px; opacity: 0.8; }
+      100% { height: 42px; opacity: 1; }
+    }
+
+    .boost-btn {
+      width: 100%;
+      max-width: 260px;
+      padding: 15px;
+      font-size: 17px;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(90deg, #ff416c, #ff4b2b);
+      border: none;
+      border-radius: 14px;
+      cursor: pointer;
+      margin-top: 30px;
+      box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+    }
+    .boost-btn:disabled { background: #232733; box-shadow: none; color: #555e6d; }
+
+    /* Экран улучшений */
+    .upgrade-list { width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .upgrade-card {
+      background: #141824;
+      border: 1px solid #22293a;
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .upgrade-info h4 { font-size: 15px; color: #fff; }
+    .upgrade-info p { font-size: 12px; color: #7f8b9e; }
+    .buy-btn {
+      background: #00f0ff;
+      color: #000;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .buy-btn:disabled { background: #283244; color: #5a667d; }
+
+    /* Нижняя панель навигации */
+    .bottom-nav {
+      height: 65px;
+      background: #111522;
+      border-top: 1px solid #1c2236;
+      display: flex;
+      justify-content: space-around;
+      align-items: center;
+    }
+    .nav-btn {
+      background: none;
+      border: none;
+      color: #7f8b9e;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      cursor: pointer;
+    }
+    .nav-btn.active { color: #00f0ff; }
+  </style>
+</head>
+<body>
+
+  <div class="hud">
+    <div class="score-title">Пройденная дистанция</div>
+    <div class="score-value" id="score">0 км</div>
+    <div class="speed-badge">Скорость: <span id="speed">10</span> км/с</div>
+  </div>
+
+  <!-- Экран 1: Полет -->
+  <div class="screen active" id="screen-game">
+    <div class="rocket" id="rocket"><div class="flame"></div></div>
+    <button class="boost-btn" id="boostBtn" onclick="activateBoost()">ФОРСАЖ (x3)</button>
+  </div>
+
+  <!-- Экран 2: Улучшения -->
+  <div class="screen" id="screen-upgrades">
+    <div class="upgrade-list">
+      <div class="upgrade-card">
+        <div class="upgrade-info">
+          <h4>Ионный двигатель</h4>
+          <p>+10 км/с к базовой скорости</p>
+        </div>
+        <button class="buy-btn" id="btn-engine" onclick="buyEngine()">100 км</button>
+      </div>
+      <div class="upgrade-card">
+        <div class="upgrade-info">
+          <h4>Охлаждение закиси</h4>
+          <p>-0.5 сек к кулдауну форсажа</p>
+        </div>
+        <button class="buy-btn" id="btn-cooldown" onclick="buyCooldown()">250 км</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Экран 3: Рефералы -->
+  <div class="screen" id="screen-friends">
+    <h3 style="margin-bottom: 10px;">Приглашай пилотов</h3>
+    <p style="font-size: 13px; color: #7f8b9e; text-align: center; margin-bottom: 20px;">
+      Получай +10 000 км за каждого друга и 10% от всей его дистанции!
+    </p>
+    <button class="boost-btn" style="margin: 0; background: #0088cc;" onclick="shareRefLink()">Пригласить друга</button>
+  </div>
+
+  <!-- Таб-бар -->
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="switchTab('screen-game', this)">🚀 Полет</button>
+    <button class="nav-btn" onclick="switchTab('screen-upgrades', this)">⚙️ Прокачка</button>
+    <button class="nav-btn" onclick="switchTab('screen-friends', this)">👥 Друзья</button>
+  </div>
+
+  <script>
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.expand();
+      tg.disableVerticalSwipes?.();
+    }
+
+    let score = 0;
+    let baseSpeed = 10;
+    let currentSpeed = baseSpeed;
+    let cooldownDuration = 5;
+    let cooldownTimer = 0;
+
+    // Цены улучшений
+    let engineCost = 100;
+    let cooldownCost = 250;
+
+    const scoreEl = document.getElementById('score');
+    const speedEl = document.getElementById('speed');
+    const boostBtn = document.getElementById('boostBtn');
+    const rocket = document.getElementById('rocket');
+
+    // Начисление очков
+    setInterval(() => {
+      score += Math.round(currentSpeed / 10);
+      scoreEl.innerText = score.toLocaleString() + ' км';
+      updateButtons();
+    }, 100);
+
+    function activateBoost() {
+      if (cooldownTimer > 0) return;
+      tg?.HapticFeedback?.impactOccurred('heavy');
+
+      currentSpeed = baseSpeed * 3;
+      speedEl.innerText = currentSpeed;
+      rocket.classList.add('boosting');
+
+      setTimeout(() => {
+        currentSpeed = baseSpeed;
+        speedEl.innerText = currentSpeed;
+        rocket.classList.remove('boosting');
+      }, 1500);
+
+      cooldownTimer = cooldownDuration;
+      runCooldown();
+    }
+
+    function runCooldown() {
+      if (cooldownTimer > 0) {
+        boostBtn.disabled = true;
+        boostBtn.innerText = `ПЕРЕЗАРЯДКА (${cooldownTimer}s)`;
+        cooldownTimer--;
+        setTimeout(runCooldown, 1000);
+      } else {
+        boostBtn.disabled = false;
+        boostBtn.innerText = 'ФОРСАЖ (x3)';
+      }
+    }
+
+    function buyEngine() {
+      if (score >= engineCost) {
+        score -= engineCost;
+        baseSpeed += 10;
+        currentSpeed = baseSpeed;
+        speedEl.innerText = currentSpeed;
+        engineCost = Math.round(engineCost * 1.5);
+        document.getElementById('btn-engine').innerText = engineCost + ' км';
+      }
+    }
+
+    function buyCooldown() {
+      if (score >= cooldownCost && cooldownDuration > 2) {
+        score -= cooldownCost;
+        cooldownDuration -= 0.5;
+        cooldownCost = Math.round(cooldownCost * 1.8);
+        document.getElementById('btn-cooldown').innerText = cooldownCost + ' км';
+      }
+    }
+
+    function updateButtons() {
+      document.getElementById('btn-engine').disabled = score < engineCost;
+      document.getElementById('btn-cooldown').disabled = score < cooldownCost || cooldownDuration <= 2;
+    }
+
+    function switchTab(screenId, btn) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+      btn.classList.add('active');
+    }
+
+    function shareRefLink() {
+      const myId = tg?.initDataUnsafe?.user?.id || 'demo';
+      const refUrl = `https://t.me/rocketX_tap_bot/app?startapp=ref_${myId}`;
+      const text = `Полетели на Луну со мной в RocketX! Лови +5,000 км бонуса на старте:`;
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(refUrl)}&text=${encodeURIComponent(text)}`;
+      tg?.openTelegramLink ? tg.openTelegramLink(shareUrl) : window.open(shareUrl, '_blank');
+    }
+  </script>
+</body>
+</html>
