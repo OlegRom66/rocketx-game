@@ -1,191 +1,275 @@
 * {
-  box-sizing: border-box;
   margin: 0;
   padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   user-select: none;
+  -webkit-user-select: none;
 }
 
 body {
-  background: #0a0d14;
-  color: #fff;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  height: 100vh;
+  background-color: #0b0e14;
+  color: #ffffff;
   overflow: hidden;
+}
+
+#game-container {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-}
-
-/* Навигация сверху */
-.hud {
-  text-align: center;
-  padding-top: 15px;
-}
-
-.score-title {
-  font-size: 12px;
-  color: #7f8b9e;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.score-value {
-  font-size: 34px;
-  font-weight: 800;
-  color: #00f0ff;
-  text-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
-}
-
-.speed-badge {
-  font-size: 13px;
-  background: rgba(255, 255, 255, 0.06);
-  padding: 4px 12px;
-  border-radius: 20px;
-  display: inline-block;
-  margin-top: 4px;
+  height: 100vh;
+  width: 100vw;
+  position: relative;
+  /* Устанавливаем твой фон на всю игру */
+  background: #0b0e14 url('bg.png') no-repeat center center;
+  background-size: cover;
 }
 
 /* Экраны */
 .screen {
   display: none;
-  height: 60vh;
+  flex-direction: column;
+  flex: 1;
   padding: 20px;
   overflow-y: auto;
+  position: relative;
+  z-index: 2;
 }
 
 .screen.active {
   display: flex;
-  flex-direction: column;
+}
+
+/* Статистика дистанции */
+.stats-card {
+  text-align: center;
+  margin-top: 20px;
+  z-index: 5;
+}
+
+.stats-label {
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  color: #8c9ba5;
+  margin-bottom: 5px;
+}
+
+#score {
+  font-size: 38px;
+  font-weight: 900;
+  color: #ffffff;
+  text-shadow: 0 0 20px rgba(255, 255, 255, 0.4);
+}
+
+.speed-badge {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 6px 16px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  font-size: 14px;
+  color: #58a6ff;
+  backdrop-filter: blur(5px);
+}
+
+/* Игровая зона с ракетой */
+.space-view {
+  flex: 1;
+  display: flex;
   align-items: center;
   justify-content: center;
-}
-
-/* Экран игры */
-.rocket {
-  width: 65px;
-  height: 110px;
-  background: linear-gradient(180deg, #ffffff 0%, #7d8597 100%);
-  border-radius: 35px 35px 8px 8px;
   position: relative;
-  box-shadow: 0 0 25px rgba(255, 255, 255, 0.2);
-  transition: transform 0.1s ease;
+  z-index: 3;
 }
 
+/* Ракета на базе картинок */
+.rocket {
+  width: 140px;
+  height: 180px;
+  background-image: url('rocket.png');
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  background-size: contain;
+  transition: transform 0.25s ease-out;
+  animation: floating 3s ease-in-out infinite;
+}
+
+/* Режим Форсажа: подмена на ракету с огнем и лёгкая вибрация */
 .rocket.boosting {
-  transform: scale(1.18);
-  box-shadow: 0 0 40px #ff4500;
+  background-image: url('rocket-boost.png') !important;
+  transform: scale(1.15) translateY(-15px);
+  animation: boostShake 0.1s infinite alternate;
 }
 
-.flame {
+@keyframes floating {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes boostShake {
+  0% { transform: scale(1.15) translateY(-15px) translateX(-1px); }
+  100% { transform: scale(1.15) translateY(-15px) translateX(1px); }
+}
+
+/* Эффект скорости (полосы/варп-линии) */
+.speed-lines {
   position: absolute;
-  bottom: -30px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 22px;
-  height: 35px;
-  background: linear-gradient(180deg, #ffc300 0%, #ff1e00 100%);
-  border-radius: 0 0 12px 12px;
-  animation: flicker 0.1s infinite alternate;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 1;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 40px,
+    rgba(255, 255, 255, 0.35) 41px,
+    transparent 42px
+  );
+  background-size: 100% 200%;
 }
 
-@keyframes flicker {
-  0% {
-    height: 30px;
-    opacity: 0.8;
-  }
-  100% {
-    height: 42px;
-    opacity: 1;
-  }
+.speed-lines.active {
+  opacity: 1;
+  animation: warpSpeed 0.2s linear infinite;
+}
+
+@keyframes warpSpeed {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 100%; }
+}
+
+/* Кнопка Форсажа */
+.controls {
+  padding-bottom: 85px;
+  display: flex;
+  justify-content: center;
+  z-index: 5;
 }
 
 .boost-btn {
-  width: 100%;
-  max-width: 260px;
-  padding: 15px;
-  font-size: 17px;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(90deg, #ff416c, #ff4b2b);
-  border: none;
+  width: 85%;
+  max-width: 320px;
+  padding: 16px;
+  font-size: 18px;
+  font-weight: 800;
   border-radius: 14px;
+  border: none;
+  background: linear-gradient(135deg, #ff416c, #ff4b2b);
+  color: #ffffff;
+  box-shadow: 0 6px 20px rgba(255, 65, 108, 0.45);
   cursor: pointer;
-  margin-top: 30px;
-  box-shadow: 0 4px 15px rgba(255, 75, 43, 0.4);
+  transition: transform 0.1s, opacity 0.2s;
+}
+
+.boost-btn:active {
+  transform: scale(0.96);
 }
 
 .boost-btn:disabled {
-  background: #232733;
+  background: #2b3340;
+  color: #7b8a99;
   box-shadow: none;
-  color: #555e6d;
+  cursor: not-allowed;
 }
 
-/* Экран улучшений */
-.upgrade-list {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+/* Экраны Улучшений и Друзей */
+.screen-title {
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 25px;
+  letter-spacing: 1px;
 }
 
 .upgrade-card {
-  background: #141824;
-  border: 1px solid #22293a;
-  border-radius: 12px;
-  padding: 12px 16px;
+  background: rgba(23, 33, 43, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  backdrop-filter: blur(10px);
 }
 
-.upgrade-info h4 {
-  font-size: 15px;
-  color: #fff;
+.upgrade-info h3 {
+  font-size: 16px;
+  margin-bottom: 4px;
 }
 
 .upgrade-info p {
-  font-size: 12px;
-  color: #7f8b9e;
+  font-size: 13px;
+  color: #8c9ba5;
 }
 
-.buy-btn {
-  background: #00f0ff;
-  color: #000;
+.upgrade-btn {
+  padding: 10px 18px;
+  border-radius: 10px;
   border: none;
-  padding: 8px 14px;
-  border-radius: 8px;
+  background: #2ea043;
+  color: #ffffff;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   cursor: pointer;
 }
 
-.buy-btn:disabled {
-  background: #283244;
-  color: #5a667d;
+.upgrade-btn:disabled {
+  background: #333d49;
+  color: #6a7785;
 }
 
-/* Нижняя панель навигации */
+.friends-desc {
+  text-align: center;
+  color: #8c9ba5;
+  font-size: 15px;
+  line-height: 1.5;
+  margin-top: 20px;
+  margin-bottom: 30px;
+}
+
+.share-btn {
+  background: linear-gradient(135deg, #2f80ed, #0056b3);
+  box-shadow: 0 6px 20px rgba(47, 128, 237, 0.4);
+}
+
+/* Нижняя навигация */
 .bottom-nav {
-  height: 65px;
-  background: #111522;
-  border-top: 1px solid #1c2236;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 70px;
+  background: rgba(15, 23, 32, 0.9);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   justify-content: space-around;
   align-items: center;
+  backdrop-filter: blur(12px);
+  z-index: 10;
 }
 
 .nav-btn {
   background: none;
   border: none;
-  color: #7f8b9e;
-  font-size: 12px;
+  color: #6c7883;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
 }
 
+.nav-btn span {
+  font-size: 18px;
+}
+
 .nav-btn.active {
-  color: #00f0ff;
+  color: #58a6ff;
 }
